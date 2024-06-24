@@ -15,18 +15,17 @@ import com.google.gson.JsonParser;
 
 public class JsonKeyConverter {
 
-	private static Path inputFilePath = Paths.get("jsonFolder", "de.json");
-	// private static Path inputFilePath = Paths.get("C:/Users/saeid.nikoubin/git/OpenEMS/ui/src/assets/i18n/de.json");
+	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
 
 	public static void main(String[] args) {
 
 		if (args.length > 0) {
-			inputFilePath = Paths.get(args[0]);
+			OPENEMS_UI_PATH = Paths.get(args[0]);
 		}
 		// TODO run this if you need new json
-		Path outputFilePath = Paths.get("jsonFolder", "output.json");
+		//Path outputFilePath = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
 
-		try (FileReader reader = new FileReader(inputFilePath.toFile())) {
+		try (FileReader reader = new FileReader(OPENEMS_UI_PATH.toFile())) {
 
 			var jsonElement = JsonParser.parseReader(reader);
 			var convertedJson = convertKeys(jsonElement);
@@ -34,15 +33,15 @@ public class JsonKeyConverter {
 			var gson = new GsonBuilder().setPrettyPrinting().create();
 			var convertedJsonString = gson.toJson(convertedJson);
 
-			System.out.println("Converted JSON:");
+			System.out.println("Converting JSON:");
 			// System.out.println(convertedJsonString);
 
 			printKeys(convertedJson.getAsJsonObject(), "");
 
 			// TODO run this if you need new json
-			try (FileWriter writer = new FileWriter(outputFilePath.toFile())) {
+			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("Converted JSON written to " + outputFilePath);
+				System.out.println("Converted JSON written to " + OPENEMS_UI_PATH);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
@@ -50,6 +49,27 @@ public class JsonKeyConverter {
 		} catch (IOException e) {
 			System.err.println("Error reading input file: " + e.getMessage());
 		}
+		
+		// --- replace
+		
+//		try (Stream<Path> stream = Files.walk(OPENEMS_UI_PATH)) {
+//		    stream.filter(Files::isRegularFile)
+//		    .filter(html + ts)
+//		          .forEach(f -> {
+//		        	System.out.println(f);
+//		        	
+//		            try (Stream<String> stream = Files.lines(f);
+//		                    FileOutputStream fop = new FileOutputStream(new File(outputFile))) {
+//		                stream.map(line -> line += " manipulate line as required\n").forEach(line -> {
+//		                    try {
+//		                        fop.write(line.getBytes());
+//		                    } catch (IOException e) {
+//		                        e.printStackTrace();
+//		                    }
+//		                });
+//		            }
+//		          });
+//		}
 	}
 
 	private static void printKeys(JsonObject jsonObject, String parentKey) {
