@@ -1,5 +1,6 @@
 package com.language.converter;
 
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -23,7 +24,7 @@ public class JsonKeyConverter {
 	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation dir
 	private static Path Dir = Paths.get("../OpenEMS/ui/src");
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 
 		if (args.length > 0) {
 			OPENEMS_UI_PATH = Paths.get(args[0]);
@@ -59,21 +60,18 @@ public class JsonKeyConverter {
 		// --- replace translation keys
 		try (Stream<Path> stream = Files.walk(UPDATE_DIR)) {
 			stream.filter(Files::isRegularFile)
-					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts")).forEach(f -> {
-						System.out.println(f);
-
-						try (Stream<String> temp = Files.lines(f);
-								FileOutputStream fop = new FileOutputStream(f.toFile())) {
-							temp.map(line -> line + " manipulate line as required\n").forEach(line -> {
-								try {
-									fop.write(line.getBytes());
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							});
+					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts"))//
+					.forEach(f -> {
+						try {
+							String content = Files.readString(f); // Read content of the file
+							System.out.println("File: " + f);
+							System.out.println("Content:\n" + content); // Print content of the file
 						} catch (IOException e) {
+							System.err.println("Failed to read file: " + f);
 							e.printStackTrace();
 						}
+						System.out.println(f);
+
 					});
 		} catch (IOException e) {
 			e.printStackTrace();
