@@ -1,11 +1,14 @@
 package com.language.converter;
 
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -16,6 +19,9 @@ import com.google.gson.JsonParser;
 public class JsonKeyConverter {
 
 	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
+	private static Path OUTPUT_FILE = Paths.get("../OpenEMS/ui/src/assets/i18n", "Output.json"); // Temporal file
+	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation dir
+	private static Path Dir = Paths.get("../OpenEMS/ui/src");
 
 	public static void main(String[] args) {
 
@@ -23,7 +29,7 @@ public class JsonKeyConverter {
 			OPENEMS_UI_PATH = Paths.get(args[0]);
 		}
 		// TODO run this if you need new json
-		//Path outputFilePath = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
+		// Path outputFilePath = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
 
 		try (FileReader reader = new FileReader(OPENEMS_UI_PATH.toFile())) {
 
@@ -39,9 +45,9 @@ public class JsonKeyConverter {
 			printKeys(convertedJson.getAsJsonObject(), "");
 
 			// TODO run this if you need new json
-			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
+			try (FileWriter writer = new FileWriter(OUTPUT_FILE.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("Converted JSON written to " + OPENEMS_UI_PATH);
+				System.out.println("Converted JSON written to " + OUTPUT_FILE);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
@@ -49,27 +55,29 @@ public class JsonKeyConverter {
 		} catch (IOException e) {
 			System.err.println("Error reading input file: " + e.getMessage());
 		}
-		
-		// --- replace
-		
-//		try (Stream<Path> stream = Files.walk(OPENEMS_UI_PATH)) {
-//		    stream.filter(Files::isRegularFile)
-//		    .filter(html + ts)
-//		          .forEach(f -> {
-//		        	System.out.println(f);
-//		        	
-//		            try (Stream<String> stream = Files.lines(f);
-//		                    FileOutputStream fop = new FileOutputStream(new File(outputFile))) {
-//		                stream.map(line -> line += " manipulate line as required\n").forEach(line -> {
-//		                    try {
-//		                        fop.write(line.getBytes());
-//		                    } catch (IOException e) {
-//		                        e.printStackTrace();
-//		                    }
-//		                });
-//		            }
-//		          });
-//		}
+
+		// --- replace translation keys
+		try (Stream<Path> stream = Files.walk(UPDATE_DIR)) {
+			stream.filter(Files::isRegularFile)
+					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts")).forEach(f -> {
+						System.out.println(f);
+
+						try (Stream<String> temp = Files.lines(f);
+								FileOutputStream fop = new FileOutputStream(f.toFile())) {
+							temp.map(line -> line + " manipulate line as required\n").forEach(line -> {
+								try {
+									fop.write(line.getBytes());
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+							});
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private static void printKeys(JsonObject jsonObject, String parentKey) {
