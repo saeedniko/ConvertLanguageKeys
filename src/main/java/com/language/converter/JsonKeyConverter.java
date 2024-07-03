@@ -1,13 +1,13 @@
 package com.language.converter;
 
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
@@ -20,17 +20,16 @@ import com.google.gson.JsonParser;
 public class JsonKeyConverter {
 
 	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
-	private static Path OUTPUT_FILE = Paths.get("../OpenEMS/ui/src/assets/i18n", "Output.json"); // Temporal file
+	private static Path OUTPUT_FILE = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json"); // Temporal file
 	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation dir
-	private static Path Dir = Paths.get("../OpenEMS/ui/src");
 
 	public static void main(String[] args) throws IOException {
 
 		if (args.length > 0) {
 			OPENEMS_UI_PATH = Paths.get(args[0]);
 		}
-		// TODO run this if you need new json
-		// Path outputFilePath = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
+
+		List<String> translationKeys = new ArrayList<>();
 
 		try (FileReader reader = new FileReader(OPENEMS_UI_PATH.toFile())) {
 
@@ -43,12 +42,20 @@ public class JsonKeyConverter {
 			System.out.println("Converting JSON:");
 			// System.out.println(convertedJsonString);
 
-			printKeys(convertedJson.getAsJsonObject(), "");
+//            printKeys(convertedJson.getAsJsonObject(), "");
+//
+//            translationKeys = extractKeys(convertedJson.getAsJsonObject(), "");
+
+			translationKeys = extractKeys(jsonElement.getAsJsonObject(), "");
+
+			// Print the extracted keys before transformation
+			System.out.println("Original keys:");
+			translationKeys.forEach(System.out::println);
 
 			// TODO run this if you need new json
 			try (FileWriter writer = new FileWriter(OUTPUT_FILE.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("Converted JSON written to " + OUTPUT_FILE);
+				System.out.println("\n \n \n \n \nConverted JSON written to: \n\n" + OUTPUT_FILE);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
@@ -57,26 +64,69 @@ public class JsonKeyConverter {
 			System.err.println("Error reading input file: " + e.getMessage());
 		}
 
-		// --- replace translation keys
-		try (Stream<Path> stream = Files.walk(UPDATE_DIR)) {
-			stream.filter(Files::isRegularFile)
-					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts"))//
-					.forEach(f -> {
-						try {
-							String content = Files.readString(f); // Read content of the file
-							System.out.println("File: " + f);
-							System.out.println("Content:\n" + content); // Print content of the file
-						} catch (IOException e) {
-							System.err.println("Failed to read file: " + f);
-							e.printStackTrace();
-						}
-						System.out.println(f);
-
-					});
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		// Search for translation keys in files
+		searchKeysInFiles(translationKeys, UPDATE_DIR);
 	}
+
+	private static List<String> extractKeys(JsonObject jsonObject, String parentKey) {
+		List<String> keys = new ArrayList<>();
+		for (Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+			String key = parentKey.isEmpty() ? entry.getKey() : parentKey + "." + entry.getKey();
+			if (entry.getValue().isJsonObject()) {
+				keys.addAll(extractKeys(entry.getValue().getAsJsonObject(), key));
+			} else {
+				keys.add(key);
+			}
+		}
+		return keys;
+	}
+
+	private static void searchKeysInFiles(List<String> keys, Path updateDir) {
+        try (Stream<Path> stream = Files.walk(updateDir)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts"))
+                    .forEach(f -> {
+                        try {
+                            String content = Files.readString(f); // Read content of the file
+                            boolean updated = false;
+                            for (String key : keys) {
+                                if (content.contains(key)) {
+                                    System.out.println("Found key \"" + key + "\" in file: " + f);
+
+                                    String transformedKey;
+                                    if (key.contains(".")) {
+                                        String[] parts = key.split("\\.");
+                                        StringBuilder sb = new StringBuilder();
+                                        for (int i = 0; i < parts.length; i++) {
+                                            if (i > 0) {
+                                                sb.append(".");
+                                            }
+                                            sb.append(convertKey(parts[i]));
+                                        }
+                                        transformedKey = sb.toString();
+                                    } else {
+                                        transformedKey = convertKey(key);
+                                    }
+                                    System.out.println("Key is converted to: " + transformedKey);
+
+                                    // Replace the key with transformedKey in content
+                                    content = content.replaceAll("\\b" + key + "\\b", transformedKey);
+                                    updated = true;
+                                }
+                            }
+                            if (updated) {
+                                Files.writeString(f, content); // Write updated content back to file
+                                System.out.println("Updated file: " + f);
+                            }
+                        } catch (IOException e) {
+                            System.err.println("Failed to read/write file: " + f);
+                            e.printStackTrace();
+                        }
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 	private static void printKeys(JsonObject jsonObject, String parentKey) {
 		for (Entry<String, JsonElement> entry : jsonObject.entrySet()) {
@@ -113,12 +163,11 @@ public class JsonKeyConverter {
 
 	private static JsonObject convertJsonObject(JsonObject jsonObject) {
 		JsonObject convertedObject = new JsonObject();
-		jsonObject.entrySet()//
-				.forEach(entry -> {
-					String convertedKey = convertKey(entry.getKey());
-					JsonElement convertedValue = convertJsonElement(entry.getValue());
-					convertedObject.add(convertedKey, convertedValue);
-				});
+		jsonObject.entrySet().forEach(entry -> {
+			String convertedKey = convertKey(entry.getKey());
+			JsonElement convertedValue = convertJsonElement(entry.getValue());
+			convertedObject.add(convertedKey, convertedValue);
+		});
 		return convertedObject;
 	}
 
