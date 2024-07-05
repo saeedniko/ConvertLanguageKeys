@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -19,8 +20,10 @@ import com.google.gson.JsonParser;
 
 public class JsonKeyConverter {
 
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(JsonKeyConverter.class);
+
 	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
-	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation Dir
+	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src");
 
 	public static void main(String[] args) throws IOException {
 
@@ -36,21 +39,20 @@ public class JsonKeyConverter {
 			var gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
 			var convertedJsonString = gson.toJson(convertedJson);
 			translationKeys = extractKeys(jsonElement.getAsJsonObject(), "");
-			System.out.println("Original keys:");
+
 			translationKeys.forEach(System.out::println);
 
 			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("Converted JSON written to: " + OPENEMS_UI_PATH);
+				logger.info("Converted JSON written to: " + OPENEMS_UI_PATH);
 			} catch (IOException e) {
-				System.err.println("Error writing to output file: " + e.getMessage());
+				logger.error("Error writing to output file: " + e.getMessage());
 			}
 
 		} catch (IOException e) {
-			System.err.println("Error reading input file: " + e.getMessage());
+			logger.error("Error reading input file: " + e.getMessage());
 		}
 
-		// Search for translation keys in files
 		searchKeysInFiles(translationKeys, UPDATE_DIR);
 	}
 
@@ -72,11 +74,11 @@ public class JsonKeyConverter {
 			stream.filter(Files::isRegularFile)
 					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts")).forEach(f -> {
 						try {
-							String content = Files.readString(f); // Read content of the file
+							String content = Files.readString(f);
 							boolean updated = false;
 							for (String key : keys) {
 								if (content.contains(key)) {
-									System.out.println("Found key \"" + key + "\" in file: " + f);
+									logger.info("Found key \"" + key + "\" in file: " + f);
 									String transformedKey;
 									if (key.contains(".")) {
 										String[] parts = key.split("\\.");
@@ -91,19 +93,18 @@ public class JsonKeyConverter {
 									} else {
 										transformedKey = convertKey(key);
 									}
-									System.out.println("Key is converted to: " + transformedKey);
+									logger.info("Key is converted to: " + transformedKey);
 
-									// Replace the key with transformedKey in content
 									content = content.replaceAll("\\b" + key + "\\b", transformedKey);
 									updated = true;
 								}
 							}
 							if (updated) {
-								Files.writeString(f, content); // Write updated content back to file
-								System.out.println("Updated file: " + f + "\n");
+								Files.writeString(f, content);
+								logger.info("Updateed file: " + f + "\n");
 							}
 						} catch (IOException e) {
-							System.err.println("Failed to read/write file: " + f);
+							logger.error("Failed to read/write file: " + f);
 							e.printStackTrace();
 						}
 					});
