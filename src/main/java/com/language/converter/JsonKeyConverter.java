@@ -20,7 +20,6 @@ import com.google.gson.JsonParser;
 public class JsonKeyConverter {
 
 	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
-	private static Path OUTPUT_FILE = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json"); // Temporal file
 	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation dir
 
 	public static void main(String[] args) throws IOException {
@@ -36,7 +35,7 @@ public class JsonKeyConverter {
 			var jsonElement = JsonParser.parseReader(reader);
 			var convertedJson = convertKeys(jsonElement);
 
-			var gson = new GsonBuilder().setPrettyPrinting().create();
+			var gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
 			var convertedJsonString = gson.toJson(convertedJson);
 
 			System.out.println("Converting JSON:");
@@ -53,9 +52,9 @@ public class JsonKeyConverter {
 			translationKeys.forEach(System.out::println);
 
 			// TODO run this if you need new json
-			try (FileWriter writer = new FileWriter(OUTPUT_FILE.toFile())) {
+			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("\n \n \n \n \nConverted JSON written to: \n\n" + OUTPUT_FILE);
+				System.out.println("\n \n \n \n \nConverted JSON written to: \n\n" + OPENEMS_UI_PATH);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
@@ -82,51 +81,50 @@ public class JsonKeyConverter {
 	}
 
 	private static void searchKeysInFiles(List<String> keys, Path updateDir) {
-        try (Stream<Path> stream = Files.walk(updateDir)) {
-            stream.filter(Files::isRegularFile)
-                    .filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts"))
-                    .forEach(f -> {
-                        try {
-                            String content = Files.readString(f); // Read content of the file
-                            boolean updated = false;
-                            for (String key : keys) {
-                                if (content.contains(key)) {
-                                    System.out.println("Found key \"" + key + "\" in file: " + f);
+		try (Stream<Path> stream = Files.walk(updateDir)) {
+			stream.filter(Files::isRegularFile)
+					.filter(f -> f.toString().endsWith(".html") || f.toString().endsWith(".ts")).forEach(f -> {
+						try {
+							String content = Files.readString(f); // Read content of the file
+							boolean updated = false;
+							for (String key : keys) {
+								if (content.contains(key)) {
+									System.out.println("Found key \"" + key + "\" in file: " + f);
 
-                                    String transformedKey;
-                                    if (key.contains(".")) {
-                                        String[] parts = key.split("\\.");
-                                        StringBuilder sb = new StringBuilder();
-                                        for (int i = 0; i < parts.length; i++) {
-                                            if (i > 0) {
-                                                sb.append(".");
-                                            }
-                                            sb.append(convertKey(parts[i]));
-                                        }
-                                        transformedKey = sb.toString();
-                                    } else {
-                                        transformedKey = convertKey(key);
-                                    }
-                                    System.out.println("Key is converted to: " + transformedKey);
+									String transformedKey;
+									if (key.contains(".")) {
+										String[] parts = key.split("\\.");
+										StringBuilder sb = new StringBuilder();
+										for (int i = 0; i < parts.length; i++) {
+											if (i > 0) {
+												sb.append(".");
+											}
+											sb.append(convertKey(parts[i]));
+										}
+										transformedKey = sb.toString();
+									} else {
+										transformedKey = convertKey(key);
+									}
+									System.out.println("Key is converted to: " + transformedKey);
 
-                                    // Replace the key with transformedKey in content
-                                    content = content.replaceAll("\\b" + key + "\\b", transformedKey);
-                                    updated = true;
-                                }
-                            }
-                            if (updated) {
-                                Files.writeString(f, content); // Write updated content back to file
-                                System.out.println("Updated file: " + f);
-                            }
-                        } catch (IOException e) {
-                            System.err.println("Failed to read/write file: " + f);
-                            e.printStackTrace();
-                        }
-                    });
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+									// Replace the key with transformedKey in content
+									content = content.replaceAll("\\b" + key + "\\b", transformedKey);
+									updated = true;
+								}
+							}
+							if (updated) {
+								Files.writeString(f, content); // Write updated content back to file
+								System.out.println("Updated file: " + f);
+							}
+						} catch (IOException e) {
+							System.err.println("Failed to read/write file: " + f);
+							e.printStackTrace();
+						}
+					});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	private static void printKeys(JsonObject jsonObject, String parentKey) {
 		for (Entry<String, JsonElement> entry : jsonObject.entrySet()) {
