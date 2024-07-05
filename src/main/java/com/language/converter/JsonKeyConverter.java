@@ -20,7 +20,7 @@ import com.google.gson.JsonParser;
 public class JsonKeyConverter {
 
 	private static Path OPENEMS_UI_PATH = Paths.get("../OpenEMS/ui/src/assets/i18n", "de.json");
-	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation dir
+	private static Path UPDATE_DIR = Paths.get("../OpenEMS/ui/src"); // Operation Dir
 
 	public static void main(String[] args) throws IOException {
 
@@ -31,20 +31,17 @@ public class JsonKeyConverter {
 		List<String> translationKeys = new ArrayList<>();
 
 		try (FileReader reader = new FileReader(OPENEMS_UI_PATH.toFile())) {
-
 			var jsonElement = JsonParser.parseReader(reader);
 			var convertedJson = convertKeys(jsonElement);
 			var gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
 			var convertedJsonString = gson.toJson(convertedJson);
 			translationKeys = extractKeys(jsonElement.getAsJsonObject(), "");
-
-			// Print the extracted keys before transformation
 			System.out.println("Original keys:");
 			translationKeys.forEach(System.out::println);
 
 			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("\nConverted JSON written to: \n" + OPENEMS_UI_PATH);
+				System.out.println("Converted JSON written to: " + OPENEMS_UI_PATH);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
