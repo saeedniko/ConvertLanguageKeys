@@ -34,27 +34,17 @@ public class JsonKeyConverter {
 
 			var jsonElement = JsonParser.parseReader(reader);
 			var convertedJson = convertKeys(jsonElement);
-
 			var gson = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
 			var convertedJsonString = gson.toJson(convertedJson);
-
-			System.out.println("Converting JSON:");
-			// System.out.println(convertedJsonString);
-
-//            printKeys(convertedJson.getAsJsonObject(), "");
-//
-//            translationKeys = extractKeys(convertedJson.getAsJsonObject(), "");
-
 			translationKeys = extractKeys(jsonElement.getAsJsonObject(), "");
 
 			// Print the extracted keys before transformation
 			System.out.println("Original keys:");
 			translationKeys.forEach(System.out::println);
 
-			// TODO run this if you need new json
 			try (FileWriter writer = new FileWriter(OPENEMS_UI_PATH.toFile())) {
 				writer.write(convertedJsonString);
-				System.out.println("\n \n \n \n \nConverted JSON written to: \n\n" + OPENEMS_UI_PATH);
+				System.out.println("\nConverted JSON written to: \n" + OPENEMS_UI_PATH);
 			} catch (IOException e) {
 				System.err.println("Error writing to output file: " + e.getMessage());
 			}
@@ -90,7 +80,6 @@ public class JsonKeyConverter {
 							for (String key : keys) {
 								if (content.contains(key)) {
 									System.out.println("Found key \"" + key + "\" in file: " + f);
-
 									String transformedKey;
 									if (key.contains(".")) {
 										String[] parts = key.split("\\.");
@@ -114,7 +103,7 @@ public class JsonKeyConverter {
 							}
 							if (updated) {
 								Files.writeString(f, content); // Write updated content back to file
-								System.out.println("Updated file: " + f);
+								System.out.println("Updated file: " + f + "\n");
 							}
 						} catch (IOException e) {
 							System.err.println("Failed to read/write file: " + f);
@@ -123,19 +112,6 @@ public class JsonKeyConverter {
 					});
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-	}
-
-	private static void printKeys(JsonObject jsonObject, String parentKey) {
-		for (Entry<String, JsonElement> entry : jsonObject.entrySet()) {
-			String key = parentKey.isEmpty() ? //
-					entry.getKey() //
-					: parentKey + "." + entry.getKey();
-			if (entry.getValue().isJsonObject()) {
-				printKeys(entry.getValue().getAsJsonObject(), key);
-			} else {
-				System.out.println(key);
-			}
 		}
 	}
 
